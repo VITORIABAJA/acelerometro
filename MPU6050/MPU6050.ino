@@ -14,7 +14,7 @@ MPU6050 accelgyro;
 
 int16_t ax, ay, az;
 int16_t gx, gy, gz;
-
+bool mutex=true; //evita manipulaçao de dados durante a leitura
 
 
 
@@ -73,11 +73,43 @@ void setup() {
 
     pinMode(LED_PIN, OUTPUT);
 }
+int16_t returnAx(){
+  if(mutex){
+      return ax;
+    }
+  }
+int16_t returnAy(){
+  if(mutex){
+      return ay;
+    }
+  }
+int16_t returnAz(){
+  if(mutex){
+      return az;
+    }
+  }
+int16_t returnGx(){
+  if(mutex){
+      return gx;
+    }
+  }
+int16_t returnGy(){
+  if(mutex){
+      return gy;
+    }
+  }
+int16_t returnGz(){
+  if(mutex){
+      return gz;
+    }
+  }
+
 
 void loop() {
     // le valores crus
+    mutex=false;
     accelgyro.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
-
+    mutex=true;
     // alternativamente a linha acima
     //accelgyro.getAcceleration(&ax, &ay, &az);
     //accelgyro.getRotation(&gx, &gy, &gz);
@@ -101,7 +133,7 @@ void loop() {
         Serial.write((uint8_t)(gy >> 8)); Serial.write((uint8_t)(gy & 0xFF));
         Serial.write((uint8_t)(gz >> 8)); Serial.write((uint8_t)(gz & 0xFF));
     #endif
-
+    
     // pisca pra mostrar atividade
     blinkState = !blinkState;
     digitalWrite(LED_PIN, blinkState);
