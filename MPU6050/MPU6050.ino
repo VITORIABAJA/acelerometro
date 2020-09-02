@@ -1,5 +1,4 @@
-#include "I2Cdev.h"
-#include "MPU6050.h"
+#include "main.h"
 
 // Se I2CDev a versao do arduino , necessario Wire.h
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
@@ -9,12 +8,11 @@
 // Endereco I2C padrao 0x68
 // AD0L = 0x68 (default for InvenSense evaluation board)
 // AD0H = 0x69
-MPU6050 accelgyro;
 //MPU6050 accelgyro(0x69); // <-- use for AD0H
 
 int16_t ax, ay, az;
 int16_t gx, gy, gz;
-bool mutex=true; //evita manipulaçao de dados durante a leitura
+
 
 
 
@@ -31,11 +29,7 @@ bool blinkState = false;
 
 void setup() {
     // junta i2c bus
-    #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
-        Wire.begin();
-    #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
-        Fastwire::setup(400, true);
-    #endif
+    Wire.begin();
 
     //inicializa serial, 38400 e bom para 8mhz e 16mhz mas mude se quiser
     Serial.begin(38400);
@@ -73,46 +67,10 @@ void setup() {
 
     pinMode(LED_PIN, OUTPUT);
 }
-int16_t returnAx(){
-  if(mutex){
-      return ax;
-    }
-  }
-int16_t returnAy(){
-  if(mutex){
-      return ay;
-    }
-  }
-int16_t returnAz(){
-  if(mutex){
-      return az;
-    }
-  }
-int16_t returnGx(){
-  if(mutex){
-      return gx;
-    }
-  }
-int16_t returnGy(){
-  if(mutex){
-      return gy;
-    }
-  }
-int16_t returnGz(){
-  if(mutex){
-      return gz;
-    }
-  }
-
 
 void loop() {
     // le valores crus
-    mutex=false;
-    accelgyro.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
-    mutex=true;
-    // alternativamente a linha acima
-    //accelgyro.getAcceleration(&ax, &ay, &az);
-    //accelgyro.getRotation(&gx, &gy, &gz);
+    getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
 
     #ifdef OUTPUT_READABLE_ACCELGYRO
         // valores separados por tab
@@ -133,7 +91,7 @@ void loop() {
         Serial.write((uint8_t)(gy >> 8)); Serial.write((uint8_t)(gy & 0xFF));
         Serial.write((uint8_t)(gz >> 8)); Serial.write((uint8_t)(gz & 0xFF));
     #endif
-    
+
     // pisca pra mostrar atividade
     blinkState = !blinkState;
     digitalWrite(LED_PIN, blinkState);
