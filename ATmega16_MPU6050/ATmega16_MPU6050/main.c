@@ -5,16 +5,17 @@
  */ 
 
 
-#define F_CPU 16000000UL									/* Define CPU clock Frequency e.g. here its 8MHz */
+#define F_CPU 16000000UL									/* Define CPU clock Frequency e.g. here its 16MHz */
 #include <avr/io.h>										/* Include AVR std. library file */
 #include <util/delay.h>									/* Include delay header file */
 #include <inttypes.h>									/* Include integer type header file */
 #include <stdlib.h>										/* Include standard library file */
 #include <stdio.h>										/* Include standard library file */
+#include "lcd.h"
 #include "MPU6050_res_define.h"							/* Include MPU6050 register define file */
 #include "I2C_Master_H_file.h"							/* Include I2C Master header file */
 #include "USART_RS232_H_file.h"							/* Include USART header file */
-#include "lcd.h"
+
 
 float Acc_x,Acc_y,Acc_z,Temperature,Gyro_x,Gyro_y,Gyro_z;
 
@@ -69,16 +70,19 @@ void Read_RawValue()
 
 int main()
 {
-	char buffer[20], float_[10];
+	char buffer[16], nums[6][4];
 	float Xa,Ya,Za,t;
 	float Xg=0,Yg=0,Zg=0;
 	I2C_Init();											/* Initialize I2C */
 	MPU6050_Init();										/* Initialize MPU6050 */
 	USART_Init(9600);									/* Initialize USART with 9600 baud rate */
-	lcd_init(LCD_DISP_ON_CURSOR);
+	lcd_init(LCD_DISP_ON);
+	lcd_clrscr();
+	_delay_ms(50);
 	while(1)
 	{
 		Read_RawValue();
+		lcd_clrscr();
 
 		Xa = Acc_x/16384.0;								/* Divide raw value by sensitivity scale factor to get real values */
 		Ya = Acc_y/16384.0;
@@ -88,10 +92,10 @@ int main()
 		Yg = Gyro_y/16.4;
 		Zg = Gyro_z/16.4;
 
-		t = (Temperature/340.00)+36.53;					/* Convert temperature in °/c using formula */
+		//t = (Temperature/340.00)+36.53;					/* Convert temperature in °/c using formula */
 
-
-		dtostrf( Xa, 3, 2, float_ );					/* Take values in buffer to send all parameters over USART */
+		/*
+		dtostrf( Xa, 3, 2, float_ );					// Take values in buffer to send all parameters over USART //
 		sprintf(buffer," Ax = %s g\t",float_);
 		USART_SendString(buffer);
 
@@ -104,7 +108,7 @@ int main()
 		USART_SendString(buffer);
 
 		dtostrf( t, 3, 2, float_ );
-		sprintf(buffer," T = %s%cC\t",float_,0xF8);           /* 0xF8 Ascii value of degree '°' on serial */
+		sprintf(buffer," T = %s%cC\t",float_,0xF8);           // 0xF8 Ascii value of degree '°' on serial //
 		USART_SendString(buffer);
 
 		dtostrf( Xg, 3, 2, float_ );
@@ -118,11 +122,18 @@ int main()
 		dtostrf( Zg, 3, 2, float_ );
 		sprintf(buffer," Gz = %s%c/s\r\n",float_,0xF8);
 		USART_SendString(buffer);
-		lcd_clrscr();             /* clear screen of lcd */
-		lcd_home();               /* bring cursor to 0,0 */
-		lcd_puts("Ax Ay Az");        /* type something random */
-		lcd_gotoxy(0,1);          /* go to 2nd row 1st col */
-		lcd_puts("maxEmbedded");  /* type something random */
-		_delay_ms(50);            /* wait 50ms */
+		*/
+		dtostrf( Xa, 3, 1, nums[0]);nums[0][3]='\0';
+		dtostrf( Ya, 3, 1, nums[1]);nums[1][3]='\0';
+		dtostrf( Za, 3, 1, nums[2]);nums[2][3]='\0';
+		dtostrf( Xg, 3, 1, nums[3]);nums[3][3]='\0';
+		dtostrf( Yg, 3, 1, nums[4]);nums[4][3]='\0';
+		dtostrf( Zg, 3, 1, nums[5]);nums[5][3]='\0';
+		sprintf(buffer,"%s% c%s%c %s%c",nums[0],0x67,nums[1],0x67,nums[2],0x67);
+		lcd_puts(buffer);
+		sprintf(buffer,"%s%c %s%c %s%c",nums[3],186,nums[4],186,nums[5],186);
+		lcd_gotoxy(0,1);
+		lcd_puts(buffer);
+		_delay_ms(500);	
 	}
 }
