@@ -71,8 +71,9 @@ void Read_RawValue()
 int main()
 {
 	char buffer[16], nums[6][4];
-	float Xa,Ya,Za,t;
-	float Xg=0,Yg=0,Zg=0;
+	float Xa=0,Ya=0,Za=0,t;
+	float Xg=0,Yg=0,Zg=0,Xgt=0,Ygt=0,Zgt=0;
+	int contador=0, t_medicao_angulo=9;
 	I2C_Init();											/* Initialize I2C */
 	MPU6050_Init();										/* Initialize MPU6050 */
 	USART_Init(9600);									/* Initialize USART with 9600 baud rate */
@@ -83,14 +84,12 @@ int main()
 	{
 		Read_RawValue();
 		lcd_clrscr();
-
-		Xa = Acc_x/16384.0;								/* Divide raw value by sensitivity scale factor to get real values */
-		Ya = Acc_y/16384.0;
-		Za = Acc_z/16384.0;
+		Xa += Acc_x/16384.0;								/* Divide raw value by sensitivity scale factor to get real values */
+		Ya += Acc_y/16384.0;
+		Za += Acc_z/16384.0;
 		
-		Xg = Gyro_x/16.4;
-		Yg = Gyro_y/16.4;
-		Zg = Gyro_z/16.4;
+		
+		
 
 		//t = (Temperature/340.00)+36.53;					/* Convert temperature in °/c using formula */
 
@@ -123,15 +122,27 @@ int main()
 		sprintf(buffer," Gz = %s%c/s\r\n",float_,0xF8);
 		USART_SendString(buffer);
 		*/
+		if (contador<t_medicao_angulo){ //soma as medições do gyro por t_medicao_angulo+1 * 500 ms XYZgt estao em graus/s
+			//16.4 é valor de sensitividade para pegar o valor real
+			Xgt += Gyro_x/16.4;
+			Ygt += Gyro_y/16.4;
+			Zgt += Gyro_z/16.4;
+			contador++;
+		} else{ //faz a média desses resultados e multiplica por 500ms(tempo entre medições) resultado em graus
+			Xg =Xgt*0.5/(t_medicao_angulo+1);
+			Yg =Ygt*0.5/(t_medicao_angulo+1);
+			Zg =Zgt*0.5/(t_medicao_angulo+1);
+			contador=0;
+		}
 		dtostrf( Xa, 3, 1, nums[0]);nums[0][3]='\0';
 		dtostrf( Ya, 3, 1, nums[1]);nums[1][3]='\0';
 		dtostrf( Za, 3, 1, nums[2]);nums[2][3]='\0';
 		dtostrf( Xg, 3, 1, nums[3]);nums[3][3]='\0';
 		dtostrf( Yg, 3, 1, nums[4]);nums[4][3]='\0';
 		dtostrf( Zg, 3, 1, nums[5]);nums[5][3]='\0';
-		sprintf(buffer,"%s% c%s%c %s%c",nums[0],0x67,nums[1],0x67,nums[2],0x67);
+		sprintf(buffer,"%s%c %s%c %s%c",nums[0],0x67,nums[1],0x67,nums[2],0x67);
 		lcd_puts(buffer);
-		sprintf(buffer,"%s%c %s%c %s%c",nums[3],186,nums[4],186,nums[5],186);
+		sprintf(buffer,"%s %s %s",nums[3],nums[4],nums[5]);
 		lcd_gotoxy(0,1);
 		lcd_puts(buffer);
 		_delay_ms(500);	
