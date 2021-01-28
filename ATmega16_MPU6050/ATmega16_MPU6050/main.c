@@ -68,12 +68,66 @@ void Read_RawValue()
 	I2C_Stop();
 }
 
+void lcd_print_acel_grau(float Xa,float Ya,float Za,float Xg,float Yg,float Zg){
+	char buffer[16],nums[6][4];
+	//printa aceleracoes e angulo 
+	dtostrf( Xa, 3, 1, nums[0]);nums[0][3]='\0';
+	dtostrf( Ya, 3, 1, nums[1]);nums[1][3]='\0';
+	dtostrf( Za, 3, 1, nums[2]);nums[2][3]='\0';
+	dtostrf( Xg, 3, 1, nums[3]);nums[3][3]='\0';
+	dtostrf( Yg, 3, 1, nums[4]);nums[4][3]='\0';
+	dtostrf( Zg, 3, 1, nums[5]);nums[5][3]='\0';
+	sprintf(buffer,"%s%c %s%c %s%c",nums[0],0x67,nums[1],0x67,nums[2],0x67);
+	lcd_puts(buffer);
+	sprintf(buffer,"%s %s %s",nums[3],nums[4],nums[5]);
+	lcd_gotoxy(0,1);
+	lcd_puts(buffer);
+}
+
+void lcd_print_rpy(float roll, float pitch,float yaw){
+	//printa roll pitch e yaw roll-> eixo x, yaw->z , pitch->y
+	char buffer[16], nums[6][5];
+	dtostrf( roll, 4, 1, nums[0]);nums[0][4]='\0';
+	dtostrf( pitch, 4, 1, nums[1]);nums[1][4]='\0';
+	dtostrf( yaw, 4, 1, nums[2]);nums[2][4]='\0';
+	sprintf(buffer,"R:%sP:%s ",nums[0],nums[1]);
+	lcd_puts(buffer);
+	sprintf(buffer,"YAW:%s ",nums[2]);
+	lcd_gotoxy(0,1);
+	lcd_puts(buffer);
+}
+void lcd_print_acel(float Xa, float Ya,float Za){
+	//printa aceleração só
+	char buffer[16], nums[6][5];
+	dtostrf( Xa, 4, 1, nums[0]);nums[0][4]='\0';
+	dtostrf( Ya, 4, 1, nums[1]);nums[1][4]='\0';
+	dtostrf( Za, 4, 1, nums[2]);nums[2][4]='\0';
+	sprintf(buffer,"Xa%s Ya%s",nums[0],nums[1]);
+	lcd_puts(buffer);
+	sprintf(buffer,"Za%s",nums[2]);
+	lcd_gotoxy(0,1);
+	lcd_puts(buffer);
+}
+
+
+float rad_2_deg(float rad){
+	float deg=rad*360/(2*M_PI);
+	while(deg>360){
+		deg-=360;
+	}
+	while(deg<0){
+		deg+=360;
+	}
+	return deg;
+}
+
+
 int main()
 {
-	char buffer[16], nums[6][4];
-	float Xa=0,Ya=0,Za=0,t;
-	float Xg=0,Yg=0,Zg=0,Xgt=0,Ygt=0,Zgt=0;
-	int contador=0, t_medicao_angulo=9;
+	char buffer[16], nums[6][5];
+	float Xa=0,Ya=0,Za=0,t,roll=0,pitch=0,yaw=0;
+	float Xg=0,Yg=0,Zg=0,Xgt=0,Ygt=0,Zgt=0; //_g graus _gt graus/s
+	int contador=0, limite=3;
 	I2C_Init();											/* Initialize I2C */
 	MPU6050_Init();										/* Initialize MPU6050 */
 	USART_Init(9600);									/* Initialize USART with 9600 baud rate */
@@ -84,67 +138,17 @@ int main()
 	{
 		Read_RawValue();
 		lcd_clrscr();
-		Xa += Acc_x/16384.0;								/* Divide raw value by sensitivity scale factor to get real values */
-		Ya += Acc_y/16384.0;
-		Za += Acc_z/16384.0;
-		
-		
-		
-
+		Xa = Acc_x/16384.0;								/* Divide raw value by sensitivity scale factor to get real values */
+		Ya = Acc_y/16384.0;
+		Za = Acc_z/16384.0;	
 		//t = (Temperature/340.00)+36.53;					/* Convert temperature in °/c using formula */
 
-		/*
-		dtostrf( Xa, 3, 2, float_ );					// Take values in buffer to send all parameters over USART //
-		sprintf(buffer," Ax = %s g\t",float_);
-		USART_SendString(buffer);
-
-		dtostrf( Ya, 3, 2, float_ );
-		sprintf(buffer," Ay = %s g\t",float_);
-		USART_SendString(buffer);
 		
-		dtostrf( Za, 3, 2, float_ );
-		sprintf(buffer," Az = %s g\t",float_);
-		USART_SendString(buffer);
-
-		dtostrf( t, 3, 2, float_ );
-		sprintf(buffer," T = %s%cC\t",float_,0xF8);           // 0xF8 Ascii value of degree '°' on serial //
-		USART_SendString(buffer);
-
-		dtostrf( Xg, 3, 2, float_ );
-		sprintf(buffer," Gx = %s%c/s\t",float_,0xF8);
-		USART_SendString(buffer);
-
-		dtostrf( Yg, 3, 2, float_ );
-		sprintf(buffer," Gy = %s%c/s\t",float_,0xF8);
-		USART_SendString(buffer);
-		
-		dtostrf( Zg, 3, 2, float_ );
-		sprintf(buffer," Gz = %s%c/s\r\n",float_,0xF8);
-		USART_SendString(buffer);
-		*/
-		if (contador<t_medicao_angulo){ //soma as medições do gyro por t_medicao_angulo+1 * 500 ms XYZgt estao em graus/s
-			//16.4 é valor de sensitividade para pegar o valor real
-			Xgt += Gyro_x/16.4;
-			Ygt += Gyro_y/16.4;
-			Zgt += Gyro_z/16.4;
-			contador++;
-		} else{ //faz a média desses resultados e multiplica por 500ms(tempo entre medições) resultado em graus
-			Xg =Xgt*0.5/(t_medicao_angulo+1);
-			Yg =Ygt*0.5/(t_medicao_angulo+1);
-			Zg =Zgt*0.5/(t_medicao_angulo+1);
-			contador=0;
-		}
-		dtostrf( Xa, 3, 1, nums[0]);nums[0][3]='\0';
-		dtostrf( Ya, 3, 1, nums[1]);nums[1][3]='\0';
-		dtostrf( Za, 3, 1, nums[2]);nums[2][3]='\0';
-		dtostrf( Xg, 3, 1, nums[3]);nums[3][3]='\0';
-		dtostrf( Yg, 3, 1, nums[4]);nums[4][3]='\0';
-		dtostrf( Zg, 3, 1, nums[5]);nums[5][3]='\0';
-		sprintf(buffer,"%s%c %s%c %s%c",nums[0],0x67,nums[1],0x67,nums[2],0x67);
-		lcd_puts(buffer);
-		sprintf(buffer,"%s %s %s",nums[3],nums[4],nums[5]);
-		lcd_gotoxy(0,1);
-		lcd_puts(buffer);
-		_delay_ms(500);	
+		//gyro dividido por fator de sensitividade 
+		Xgt=Gyro_x/16.4;
+		Ygt=Gyro_y/16.4;
+		Zgt=Gyro_z/16.4;
+		lcd_print_rpy(Xgt,Ygt,Zgt);
+		_delay_ms(500);
 	}
 }
